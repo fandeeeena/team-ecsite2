@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8" />
+<title>gaia's kitchen</title>
+<link rel="stylesheet" href="/css/reset.css" th:href"@{/css/reset.css}">
+</head>
+<body>
+
+<th:block th:fragment="pageHeader">
+	<script src="http://code.jquery.com/jquery-3.4.1.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+	<link rel="stylesheet"
+			href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+	<script src="/js/util/stringUtil.js" th:src="@{/js/util/stringUtil.js}"></script>
+	<script src="/js/util/validator.js" th:src="@{/js/util/validator.js}"></script>
+	<script src="/js/dialogConfig.js" th:src="@{/js/dialogConfig.js}"></script>
+	<script th:inline="javascript">
+	$(() => {
+		$('#loginError').dialog(dialogConfig.loginError);
+		
+		$('button#login').on('click', () => {
+			let jsonString = {
+				'userName' : $('div.loginArea input[name=userName]').val(),
+				'password' : $('div.loginArea input[name=password]').val()
+			};
+			$.ajax({
+				type: 'POST',
+				url: '/gaia/auth/login',
+				data: JSON.stringify(jsonString),
+				contentType: 'application/json',
+				datatype: 'json',
+				scriptCharset: 'utf-8'
+			})
+			.then((result) => {
+				let user = JSON.parse(result);
+				if(isEmpty(user)) {
+					$('#hiddenUserName').val('');
+					$('#loginError').dialog('open');
+				} else {
+					$('#hiddenUserName').val(user['userName']);
+					login(user);
+				}
+			}, () => {
+				alert('Error:ajax connection failed.');
+			});
+		});
+		
+		$('button#logout').on('click', () => {
+			$.ajax({
+				type: 'POST',
+				url: '/gaia/auth/logout',
+				datatype: 'json',
+				scriptCharset: 'utf-8'
+			})
+			.then((result) => {
+				$('#hiddenUserName').val('');
+				logout();
+				alert('ログアウトしました。');
+				location.replace('/gaia/');
+			}, () => {
+				alert('Error: ajax connection failed.');
+			});
+		});
+	});
+		
+		function login(user) {
+			let userName = user['userName'];
+			$('.welcomeMsg').text(`ようこそ！ ${userName} さん`);
+			if(isEmpty($('button#login').prop('class'))){
+				$('button#login').addClass('hidden');
+				$('button#logout').removeClass('hidden');
+			}
+			
+			$('#mypageMenu').removeClass('hidden');
+			
+			$('div.loginArea input[name=userName]').val('');
+			$('div.loginArea input[name=password]').val('');
+			
+		}
+		
+		function logout(){
+			$('.welcomeMsg').text(`ようこそ！ ゲスト さん`);
+			if (isEmpty($('button#logout').prop('class'))){
+				$('button#logout').addClass('hidden');
+				$('button#login').removeClass('hidden');
+			}
+			if(isEmpty($('#mypageMenu').prop('class'))){
+				$('#mypageMenu').addClass('hidden');
+			}
+			
+			$('div.loginArea input[name=userName]').val('');
+			$('div.loginArea input[name=password]').val('');
+		}
+	</script>
+	
+	
+	<!-- タイトルロゴをクリックでトップ画面に遷移 -->
+	<div class="headerTop">
+		<h1 class="logo"><a href="/gaia/">gaia's kitchen</a></h1>
+		
+		
+		<!-- クリックで新規ユーザー登録に遷移 -->
+		<span class="signup">
+			<a href="/gaia/user/" th:href="@{/gaia/user/}">
+			新規ユーザ登録はこちら
+			</a>
+		</span>
+		
+		
+		<!-- ログイン認証機能。ログイン未or済 -->
+		<span class="welcomeMsg"
+			th:text="'ようこそ！ '+${loginSession == null || loginSession.getUserName() == null ? 'ゲスト さん' : loginSession.getUserName() + ' さん'}">
+		</span>
+	</div>
+	 
+	 
+	 
+	 <!--ログイン認証機能。-->
+	<nav>
+		<div class="loginArea">
+			<input type="text" name="userName" />
+			<input type="password" name="password" />
+			<input type="hidden" id="hiddenUserName" value="" />
+			<button id="login" th:class="${loginSession == null || loginSession.getUserName() == null ? '' : 'hidden'}">ログイン</button>
+			<button id="logout" th:class="${loginSession == null || loginSession.getUserName() == null ? 'hidden' : ''}" >ログアウト</button>
+		</div>
+	
+		
+		<!--カートをクリックでカートに遷移。
+		ログイン済のみマイページをクリックでマイページに遷移。-->
+		<ul class="menu">
+			<li id="cartMenu"><a href="/gaia/cart/">カート</a></li>
+			<li id="mypageMenu" th:class="${loginSession == null || loginSession.getUserName() == null ? 'hidden' : ''}"><a href="/gaia/mypage/">マイページ</a></li>
+		</ul>
+	</nav>
+	
+	
+		<!-- Modal Dialog (ログインエラー) -->
+	<div th:insert="fragments/dialog_login_error::dialogLoginError"></div>
+	
+</th:block>
+
+
+</body>
+</html>
